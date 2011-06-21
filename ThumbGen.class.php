@@ -11,13 +11,11 @@
  *
  * @package ThumbGen
  * @subpackage ThumbGen_Core
- * @version 1.0
+ * @version 1.0.0
  * @link https://github.com/avataru/ThumbGen
  * @author Mihai Zaharie <mihai@zaharie.ro>
  * @license http://creativecommons.org/licenses/by-nc-sa/3.0/   CC BY-NC-SA 3.0
  */
-
-// TODO: remove trailing spaces, replace tabs with spaces
 
 class ThumbGen
 {
