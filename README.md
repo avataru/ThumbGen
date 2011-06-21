@@ -56,4 +56,4 @@ Please see the examples for actual code.
  - Unit testing
  - Modify setWatermark to support a variable number of arguments for repetition (ie. no padding needed for no-repeat)
  
-Copyright © 20011 [Mihai Zaharie](http://mihai.zaharie.ro)
+Copyright (c) 20011 [Mihai Zaharie](http://mihai.zaharie.ro)
