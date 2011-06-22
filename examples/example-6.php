@@ -3,8 +3,8 @@
 require_once('../ThumbGen.class.php');
 require_once('../Watermark.class.php');
 
-// Enable caching, in the "cache" folder with a 2 minutes expiration
-$thumbGen = new Watermark(true, 'cache', 120);
+// Enable caching, in the "cache" folder with infinite duration (until the source image is modified)
+$thumbGen = new Watermark(true, 'cache', 0);
 
 // JPEG thumbnail
 $thumbGen->setFormat('jpg');

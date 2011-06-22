@@ -11,7 +11,7 @@
  *
  * @package ThumbGen
  * @subpackage ThumbGen_Core
- * @version 1.0.0
+ * @version 1.0.1
  * @link https://github.com/avataru/ThumbGen
  * @author Mihai Zaharie <mihai@zaharie.ro>
  * @license http://creativecommons.org/licenses/by-nc-sa/3.0/   CC BY-NC-SA 3.0
@@ -63,7 +63,7 @@ class ThumbGen
      *
      * @var integer
      */
-    protected $cacheDuration        = 86400;
+    protected $cacheDuration        = 0;
 
     /**
      * Supported input image formats
@@ -379,9 +379,18 @@ class ThumbGen
         {
             $cachedImage = $this->getCachedFilePath($sourceImage, $width, $height, $format);
 
-            if (file_exists($cachedImage) && filemtime($sourceImage) <= filemtime($cachedImage))
+            if (file_exists($cachedImage))
             {
-                return true;
+                // For infinite cache duration (until the source image changes)
+                if ($this->cacheDuration <= 0 && filemtime($sourceImage) <= filemtime($cachedImage))
+                {
+                    return true;
+                }
+                // For a limited cache duration
+                elseif (time() <= filemtime($cachedImage) + $this->cacheDuration)
+                {
+                    return true;
+                }
             }
         }
 

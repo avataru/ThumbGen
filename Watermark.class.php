@@ -11,7 +11,7 @@
  *
  * @package ThumbGen
  * @subpackage ThumbGen_Watermark
- * @version 1.0.0
+ * @version 1.0.1
  * @link https://github.com/avataru/ThumbGen
  * @author Mihai Zaharie <mihai@zaharie.ro>
  * @license http://creativecommons.org/licenses/by-nc-sa/3.0/   CC BY-NC-SA 3.0
@@ -206,10 +206,10 @@ class Watermark extends ThumbGen
      * @param string $watermark OPTIONAL Watermark image path
      * @param array $dimensions OPTIONAL Watermark width and height in pixels
      * @param array $position OPTIONAL Watermark vertical and horizontal alignment and x and y coordinates
-     * @param array $repetition OPTIONAL Watermark repetition type and padding
+     * @param mixed $repetition OPTIONAL Watermark repetition type and padding if needed
      * @return bool
      */
-    public function setWatermark($watermark = null, $opacity = null, array $dimensions = null, array $position = null, array $repetition = null)
+    public function setWatermark($watermark = null, $opacity = null, array $dimensions = null, array $position = null, $repetition = null)
     {
         if ($watermark != null && !$this->setWatermarkImage($watermark))
         {
@@ -235,10 +235,15 @@ class Watermark extends ThumbGen
             return false;
         }
 
-        if ($repetition != null && !$this->setWatermarkRepetition($repetition[0], $repetition[1], $repetition[2]))
+        if ($repetition != null)
         {
-            $this->throwError('The watermark repetition is not valid');
-            return false;
+            if (
+                (is_array($repetition) && !$this->setWatermarkRepetition($repetition[0], $repetition[1], $repetition[2]))
+                || ($repetition == 'no-repeat' && !$this->setWatermarkRepetition($repetition))
+            ){
+                $this->throwError('The watermark repetition is not valid');
+                return false;
+            }
         }
 
         return true;

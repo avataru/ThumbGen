@@ -29,7 +29,7 @@ $thumbGen->setWatermarkPosition('bottom', 'left', 5, 5);
 $thumbGen->setWatermarkOpacity(80);
 
 // No repetition
-$thumbGen->setWatermarkRepetition('no-repeat', 0, 0);
+$thumbGen->setWatermarkRepetition('no-repeat');
 
 // Output the thumbnail
 $thumbGen->getThumbnail('images/pic.jpg');
