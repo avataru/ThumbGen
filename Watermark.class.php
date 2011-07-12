@@ -1,6 +1,6 @@
 <?php
 /**
- * ThumbGen Watermark
+ * ThumbGen Watermark Plugin
  *
  * This class adds a watermark to the generated thumbnails
  *
@@ -10,14 +10,16 @@
  * Requires PHP 5.2+
  *
  * @package ThumbGen
- * @subpackage ThumbGen_Watermark
- * @version 1.0.1
+ * @subpackage Plugin
+ * @version 1.1.0
  * @link https://github.com/avataru/ThumbGen
  * @author Mihai Zaharie <mihai@zaharie.ro>
  * @license http://creativecommons.org/licenses/by-nc-sa/3.0/   CC BY-NC-SA 3.0
  */
 
-class Watermark extends ThumbGen
+namespace ThumbGen;
+require_once('Plugin.class.php');
+class Watermark extends Plugin
 {
     /**
      * Watermark image file
@@ -54,8 +56,8 @@ class Watermark extends ThumbGen
      *
      * @var array of type and padding
      */
-    protected $watermarkRepetition    = array(
-        'type'                         => 'no-repeat',
+    protected $watermarkRepetition  = array(
+        'type'                      => 'no-repeat',
         'paddingX'                  => 0,
         'paddingY'                  => 0
     );
@@ -70,132 +72,94 @@ class Watermark extends ThumbGen
 
 
     /**
-     * Fetches the thumbnail for display (with watermark)
+     * Adds the watermark to the thumbnail
      *
-     * @param string $sourceImage Source image path
-     * @param integer $width OPTIONAL Thumbnail width in pixels
-     * @param integer $height OPTIONAL Thumbnail height in pixels
-     * @param string $format OPTIONAL Thumbnail format
-     * @return image
+     * @param ThumbGen $thumbGen ThumbGen object
+     * @return boolean Returns true if the watermark was applied sucessfully
      */
-    public function getThumbnail($sourceImage, $width = null, $height = null, $format = null)
+    public function addWatermark(\ThumbGen $thumbGen)
     {
-        $format = ($format != null && in_array($format, $this->validThumbnailTypes)) ? $format : $this->format;
+        $thumbnail = imagecreatefromstring($thumbGen->getThumbnailData());
+        list($width, $height) = array_values($thumbGen->getThumbnailDimensions());
 
-        if ($this->useCache && $this->isCached($sourceImage, $width, $height, $format))
+        if ($thumbnail != null)
         {
-            // Load the cached version
-            $thumbnail = $this->getCachedThumbnail($sourceImage, $width, $height, $format);
-        }
-        else
-        {
-            $thumbnail = $this->makeThumbnail($sourceImage, $width, $height);
+            $imWatermark = imagecreatefrompng($this->watermarkImage);
+            imagealphablending($imWatermark, false);
+            imagesavealpha($imWatermark, true);
 
-            // Watermark
-            if ($this->watermarkImage != null)
+            list($watermarkSourceWidth, $watermarkSourceHeight) = getimagesize($this->watermarkImage);
+            $thumbnailWidth = ($width != null && is_int($width) && $width > 0) ? $width : $this->thumbnailDimensions['width'];
+            $thumbnailHeight = ($height != null && is_int($height) && $height > 0) ? $height : $this->thumbnailDimensions['height'];
+
+            if ($this->watermarkPosition['hAlign'] == 'right')
             {
-                $imWatermark = imagecreatefrompng($this->watermarkImage);
-                imagealphablending($imWatermark, false);
-                imagesavealpha($imWatermark, true);
+                $position['x'] = $thumbnailWidth - $this->watermarkDimensions['width'] - $this->watermarkPosition['x'];
+            }
+            elseif ($this->watermarkPosition['hAlign'] == 'center')
+            {
+                $position['x'] = round($thumbnailWidth / 2) - round($this->watermarkDimensions['width'] / 2) + $this->watermarkPosition['x'];
+            }
+            else
+            {
+                $position['x'] = $this->watermarkPosition['x'];
+            }
 
-                list($watermarkSourceWidth, $watermarkSourceHeight) = getimagesize($this->watermarkImage);
-                $thumbnailWidth = ($width != null && is_int($width) && $width > 0) ? $width : $this->thumbnailDimensions['width'];
-                $thumbnailHeight = ($height != null && is_int($height) && $height > 0) ? $height : $this->thumbnailDimensions['height'];
+            if ($this->watermarkPosition['vAlign'] == 'bottom')
+            {
+                $position['y'] = $thumbnailHeight - $this->watermarkDimensions['height'] - $this->watermarkPosition['y'];
+            }
+            elseif ($this->watermarkPosition['vAlign'] == 'middle')
+            {
+                $position['y'] = round($thumbnailHeight / 2) - round($this->watermarkDimensions['height'] / 2) + $this->watermarkPosition['y'];
+            }
+            else
+            {
+                $position['y'] = $this->watermarkPosition['y'];
+            }
 
-                if ($this->watermarkPosition['hAlign'] == 'right')
-                {
-                    $position['x'] = $thumbnailWidth - $this->watermarkDimensions['width'] - $this->watermarkPosition['x'];
-                }
-                elseif ($this->watermarkPosition['hAlign'] == 'center')
-                {
-                    $position['x'] = round($thumbnailWidth / 2) - round($this->watermarkDimensions['width'] / 2) + $this->watermarkPosition['x'];
-                }
-                else
-                {
-                    $position['x'] = $this->watermarkPosition['x'];
-                }
+            // Opacity
+            $imTransparentWatermark = imagecreatetruecolor($watermarkSourceWidth, $watermarkSourceHeight);
+            imagealphablending($imTransparentWatermark, false);
+            imagesavealpha($imTransparentWatermark, true);
+            $this->imagecopymergealpha($imTransparentWatermark, $imWatermark, 0, 0, 0, 0, $watermarkSourceWidth, $watermarkSourceHeight, $this->watermarkOpacity);
 
-                if ($this->watermarkPosition['vAlign'] == 'bottom')
-                {
-                    $position['y'] = $thumbnailHeight - $this->watermarkDimensions['height'] - $this->watermarkPosition['y'];
-                }
-                elseif ($this->watermarkPosition['vAlign'] == 'middle')
-                {
-                    $position['y'] = round($thumbnailHeight / 2) - round($this->watermarkDimensions['height'] / 2) + $this->watermarkPosition['y'];
-                }
-                else
-                {
-                    $position['y'] = $this->watermarkPosition['y'];
-                }
-
-                // Opacity
-                $imTransparentWatermark = imagecreatetruecolor($watermarkSourceWidth, $watermarkSourceHeight);
-                imagealphablending($imTransparentWatermark, false);
-                imagesavealpha($imTransparentWatermark, true);
-                $this->imagecopymergealpha($imTransparentWatermark, $imWatermark, 0, 0, 0, 0, $watermarkSourceWidth, $watermarkSourceHeight, $this->watermarkOpacity);
-
-                // Repetition
-                switch ($this->watermarkRepetition['type'])
-                {
-                    case 'repeat-x':
-                        for ($position['x'] = 0; $position['x'] < $thumbnailWidth; $position['x'] = $position['x'] + $this->watermarkDimensions['width'] + $this->watermarkRepetition['paddingX'])
-                        {
-                            imagecopyresampled($thumbnail, $imTransparentWatermark, $position['x'], $position['y'], 0, 0, $this->watermarkDimensions['width'], $this->watermarkDimensions['height'], $watermarkSourceWidth, $watermarkSourceHeight);
-                        }
-                        break;
-                    case 'repeat-y':
+            // Repetition
+            switch ($this->watermarkRepetition['type'])
+            {
+                case 'repeat-x':
+                    for ($position['x'] = 0; $position['x'] < $thumbnailWidth; $position['x'] = $position['x'] + $this->watermarkDimensions['width'] + $this->watermarkRepetition['paddingX'])
+                    {
+                        imagecopyresampled($thumbnail, $imTransparentWatermark, $position['x'], $position['y'], 0, 0, $this->watermarkDimensions['width'], $this->watermarkDimensions['height'], $watermarkSourceWidth, $watermarkSourceHeight);
+                    }
+                    break;
+                case 'repeat-y':
+                    for ($position['y'] = 0; $position['y'] < $thumbnailHeight; $position['y'] = $position['y'] + $this->watermarkDimensions['height'] + $this->watermarkRepetition['paddingY'])
+                    {
+                        imagecopyresampled($thumbnail, $imTransparentWatermark, $position['x'], $position['y'], 0, 0, $this->watermarkDimensions['width'], $this->watermarkDimensions['height'], $watermarkSourceWidth, $watermarkSourceHeight);
+                    }
+                    break;
+                case 'repeat-xy':
+                    for ($position['x'] = 0; $position['x'] < $thumbnailWidth; $position['x'] = $position['x'] + $this->watermarkDimensions['width'] + $this->watermarkRepetition['paddingX'])
+                    {
                         for ($position['y'] = 0; $position['y'] < $thumbnailHeight; $position['y'] = $position['y'] + $this->watermarkDimensions['height'] + $this->watermarkRepetition['paddingY'])
                         {
                             imagecopyresampled($thumbnail, $imTransparentWatermark, $position['x'], $position['y'], 0, 0, $this->watermarkDimensions['width'], $this->watermarkDimensions['height'], $watermarkSourceWidth, $watermarkSourceHeight);
                         }
-                        break;
-                    case 'repeat-xy':
-                        for ($position['x'] = 0; $position['x'] < $thumbnailWidth; $position['x'] = $position['x'] + $this->watermarkDimensions['width'] + $this->watermarkRepetition['paddingX'])
-                        {
-                            for ($position['y'] = 0; $position['y'] < $thumbnailHeight; $position['y'] = $position['y'] + $this->watermarkDimensions['height'] + $this->watermarkRepetition['paddingY'])
-                            {
-                                imagecopyresampled($thumbnail, $imTransparentWatermark, $position['x'], $position['y'], 0, 0, $this->watermarkDimensions['width'], $this->watermarkDimensions['height'], $watermarkSourceWidth, $watermarkSourceHeight);
-                            }
-                        }
-                        break;
-                    case 'no-repeat':
-                    default:
-                        imagecopyresampled($thumbnail, $imTransparentWatermark, $position['x'], $position['y'], 0, 0, $this->watermarkDimensions['width'], $this->watermarkDimensions['height'], $watermarkSourceWidth, $watermarkSourceHeight);
-                }
-            }
-
-            // Cache the thumbnail
-            if ($this->useCache)
-            {
-                $this->cacheThumbnail($thumbnail, $this->getCachedFilePath($sourceImage, $thumbnailWidth, $thumbnailHeight, $format), $format);
-            }
-        }
-
-        if ($thumbnail)
-        {
-            switch($format)
-            {
-                case 'gif':
-                    header('Content-Type: image/gif');
-                    imagegif($thumbnail);
+                    }
                     break;
-                case 'jpg':
-                    header('Content-Type: image/jpeg');
-                    imagejpeg($thumbnail, null, $this->thumbnailQuality);
-                    break;
-                case 'png':
-                    $compression = round(9 - ($this->thumbnailQuality * 0.09), 0, PHP_ROUND_HALF_UP);
-                    header('Content-Type: image/png');
-                    imagepng($thumbnail, null, $compression);
-                    break;
+                case 'no-repeat':
                 default:
-                    $this->throwError('The output format is not supported');
-                    return false;
+                    imagecopyresampled($thumbnail, $imTransparentWatermark, $position['x'], $position['y'], 0, 0, $this->watermarkDimensions['width'], $this->watermarkDimensions['height'], $watermarkSourceWidth, $watermarkSourceHeight);
             }
-        }
 
-        // Cleanup
-        imagedestroy($thumbnail);
+            // Save the image data for future processing
+            ob_start();
+            imagegd2($thumbnail, null, null, IMG_GD2_RAW);
+            $this->thumbnail = ob_get_clean();
+
+            return true;
+        }
 
         return false;
     }

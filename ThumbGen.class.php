@@ -10,8 +10,8 @@
  * Requires PHP 5.2+
  *
  * @package ThumbGen
- * @subpackage ThumbGen_Core
- * @version 1.0.1
+ * @subpackage Core
+ * @version 1.1.0
  * @link https://github.com/avataru/ThumbGen
  * @author Mihai Zaharie <mihai@zaharie.ro>
  * @license http://creativecommons.org/licenses/by-nc-sa/3.0/   CC BY-NC-SA 3.0
@@ -34,7 +34,7 @@ class ThumbGen
      *
      * @var string
      */
-    protected $format      = 'jpg';
+    protected $format               = 'jpg';
 
     /**
      * Thumbnail quality (percentage)
@@ -70,7 +70,7 @@ class ThumbGen
      *
      * @var array of IMAGETYPE_XXX constants
      */
-    protected $validImageTypes        = array(
+    protected $validImageTypes      = array(
         IMAGETYPE_GIF,
         IMAGETYPE_JPEG,
         IMAGETYPE_PNG
@@ -81,19 +81,27 @@ class ThumbGen
      *
      * @var array of file types
      */
-    protected $validThumbnailTypes    = array(
+    protected $validThumbnailTypes  = array(
         'gif',
         'jpg',
         'png'
     );
 
+    /**
+     * The thumbnail (from cache or processed)
+     *
+     * @var image
+     */
+    protected $thumbnail            = null;
+
 
     /**
      * Class constructor
      *
-     * @param bool $useCache OPTIONAL Whether to use cache or not
+     * @param boolean $useCache OPTIONAL Whether to use cache or not
      * @param string $cacheLocation OPTIONAL Path to the cache folder
      * @param integer $cacheDuration OPTIONAL Cache duration in seconds
+     * @return boolean Returns true
      */
     public function __construct($useCache = false, $cacheLocation = '', $cacheDuration = 86400)
     {
@@ -104,13 +112,13 @@ class ThumbGen
     }
 
     /**
-     * Fetches the thumbnail for display
+     * Prepares the thumbnail (gets the cached version or a freshly generated version)
      *
      * @param string $sourceImage Source image path
      * @param integer $width OPTIONAL Thumbnail width in pixels
      * @param integer $height OPTIONAL Thumbnail height in pixels
      * @param string $format OPTIONAL Thumbnail format
-     * @return image
+     * @return boolean Returns true if the thumbnail data was sucessfully generated
      */
     public function getThumbnail($sourceImage, $width = null, $height = null, $format = null)
     {
@@ -119,44 +127,20 @@ class ThumbGen
         if ($this->useCache && $this->isCached($sourceImage, $width, $height, $format))
         {
             // Load the cached version
-            $thumbnail = $this->getCachedThumbnail($sourceImage, $width, $height, $format);
+            $this->getCachedThumbnail($sourceImage, $width, $height, $format);
+            return true;
         }
         else
         {
-            $thumbnail = $this->makeThumbnail($sourceImage, $width, $height);
+            $this->makeThumbnail($sourceImage, $width, $height);
 
             // Cache the thumbnail
             if ($this->useCache)
             {
-                $this->cacheThumbnail($thumbnail, $this->getCachedFilePath($sourceImage, $width, $height, $format), $format);
+                $this->cacheThumbnail($this->getCachedFilePath($sourceImage, $width, $height, $format), $format);
             }
+            return true;
         }
-
-        if ($thumbnail)
-        {
-            switch($format)
-            {
-                case 'gif':
-                    header('Content-Type: image/gif');
-                    imagegif($thumbnail);
-                    break;
-                case 'jpg':
-                    header('Content-Type: image/jpeg');
-                    imagejpeg($thumbnail, null, $this->thumbnailQuality);
-                    break;
-                case 'png':
-                    $compression = round(9 - ($this->thumbnailQuality * 0.09), 0, PHP_ROUND_HALF_UP);
-                    header('Content-Type: image/png');
-                    imagepng($thumbnail, null, $compression);
-                    break;
-                default:
-                    $this->throwError('The output format is not supported');
-                    return false;
-            }
-        }
-
-        // Cleanup
-        imagedestroy($thumbnail);
 
         return false;
     }
@@ -167,7 +151,7 @@ class ThumbGen
      * @param string $sourceImage Source image path
      * @param integer $width OPTIONAL Thumbnail width in pixels
      * @param integer $height OPTIONAL Thumbnail height in pixels
-     * @return mixed Returns the image object or false
+     * @return boolean Returns true if the image was sucessfully processed
      */
     protected function makeThumbnail($sourceImage, $width = null, $height = null)
     {
@@ -223,7 +207,14 @@ class ThumbGen
                 }
 
                 imagedestroy($imSource);
-                return $imThumbnail;
+
+                // Save the image data for future processing
+                ob_start();
+                imagegd2($imThumbnail, null, null, IMG_GD2_RAW);
+                $this->thumbnail = ob_get_clean();
+
+                imagedestroy($imThumbnail);
+                return true;
             }
             else
             {
@@ -241,10 +232,45 @@ class ThumbGen
     }
 
     /**
+     * Outputs the thumbnail
+     *
+     * @return image Outputs the header and the processed thumbnail or boolean false
+     */
+    public function outputThumbnail()
+    {
+        if ($this->thumbnail != null)
+        {
+            $thumbnailData = imagecreatefromstring($this->thumbnail);
+
+            switch($this->format)
+            {
+                case 'gif':
+                    header('Content-Type: image/gif');
+                    imagegif($thumbnailData);
+                    break;
+                case 'jpg':
+                    header('Content-Type: image/jpeg');
+                    imagejpeg($thumbnailData, null, $this->thumbnailQuality);
+                    break;
+                case 'png':
+                    header('Content-Type: image/png');
+                    $compression = round(9 - ($this->thumbnailQuality * 0.09), 0, PHP_ROUND_HALF_UP);
+                    imagepng($thumbnailData, null, $compression);
+                    break;
+                default:
+                    $this->throwError('The output format is not supported');
+                    return false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Sets the thumbnail format
      *
      * @param string $format Thumbnail format
-     * @return bool
+     * @return boolean Returns true if the format was set sucessfully
      */
     public function setFormat($format)
     {
@@ -261,7 +287,7 @@ class ThumbGen
      *
      * @param integer $width Thumbnail width in pixels
      * @param integer $height Thumbnail height in pixels
-     * @return bool
+     * @return boolean Returns true if the dimensions were set sucessfully
      */
     public function setDimensions($width, $height)
     {
@@ -278,7 +304,7 @@ class ThumbGen
      * Sets the quality of the thumbnail
      *
      * @param integer $quality Thumbnail quality in percents
-     * @return bool
+     * @return boolean Returns true if the quality was set sucessfully
      */
     public function setQuality($quality)
     {
@@ -293,8 +319,8 @@ class ThumbGen
     /**
      * Sets the caching status
      *
-     * @param bool $useCache Enable or disable caching
-     * @return bool
+     * @param boolean $useCache Enable or disable caching
+     * @return boolean Returns true if the caching status was set sucessfully
      */
     public function setCaching($useCache)
     {
@@ -306,7 +332,7 @@ class ThumbGen
      * Sets the cache location
      *
      * @param string $location Cache folder path
-     * @return bool
+     * @return boolean Returns true if the cache location was set sucessfully
      */
     public function setCacheLocation($location)
     {
@@ -323,7 +349,7 @@ class ThumbGen
      * Sets the cache duration
      *
      * @param integer $duration Cache duration in seconds
-     * @return bool
+     * @return boolean Returns true if the cache duration was set sucessfully
      */
     public function setCacheDuration($duration)
     {
@@ -338,27 +364,32 @@ class ThumbGen
     /**
      * Updates or saves the cached version of the thumbnail
      *
-     * @param image $data Image data
      * @param string $fileName The file name of cached thumbnail
      * @param string $format OPTIONAL Thumbnail format
+     * @return boolean Returns true if the thumbnail image was succesfully cached
      */
-    protected function cacheThumbnail($thumbnailData, $fileName, $format = null)
+    protected function cacheThumbnail($fileName, $format = null)
     {
-        switch($format)
+        if ($this->thumbnail != null)
         {
-            case 'gif':
-                imagegif($thumbnailData, $fileName);
-                break;
-            case 'jpg':
-                imagejpeg($thumbnailData, $fileName, $this->thumbnailQuality);
-                break;
-            case 'png':
-                $compression = round(9 - ($this->thumbnailQuality * 0.09), 0, PHP_ROUND_HALF_UP);
-                imagepng($thumbnailData, $fileName, $compression);
-                break;
-            default:
-                $this->throwError('The output format is not supported');
-                return false;
+            $thumbnailData = imagecreatefromstring($this->thumbnail);
+
+            switch($format)
+            {
+                case 'gif':
+                    imagegif($thumbnailData, $fileName);
+                    break;
+                case 'jpg':
+                    imagejpeg($thumbnailData, $fileName, $this->thumbnailQuality);
+                    break;
+                case 'png':
+                    $compression = round(9 - ($this->thumbnailQuality * 0.09), 0, PHP_ROUND_HALF_UP);
+                    imagepng($thumbnailData, $fileName, $compression);
+                    break;
+                default:
+                    $this->throwError('The output format is not supported');
+                    return false;
+            }
         }
 
         return true;
@@ -371,7 +402,7 @@ class ThumbGen
      * @param integer $width OPTIONAL Thumbnail width in pixels
      * @param integer $height OPTIONAL Thumbnail height in pixels
      * @param string $format OPTIONAL Thumbnail format
-     * @return bool
+     * @return boolean Returns false if there is no cached version or if the cache is expired
      */
     public function isCached($sourceImage, $width = null, $height = null, $format = null)
     {
@@ -404,7 +435,7 @@ class ThumbGen
      * @param integer $width OPTIONAL Thumbnail width in pixels
      * @param integer $height OPTIONAL Thumbnail height in pixels
      * @param string $format OPTIONAL Thumbnail format
-     * @return string
+     * @return string Returns the cached image path
      */
     public function getCachedFilePath($sourceImage, $width = null, $height = null, $format = null)
     {
@@ -437,7 +468,7 @@ class ThumbGen
      * @param integer $width OPTIONAL Thumbnail width in pixels
      * @param integer $height OPTIONAL Thumbnail height in pixels
      * @param string $format OPTIONAL Thumbnail format
-     * @return image
+     * @return boolean Returns true if the cached version was retrieved sucessfully
      */
     protected function getCachedThumbnail($sourceImage, $width = null, $height = null, $format = null)
     {
@@ -463,7 +494,13 @@ class ThumbGen
                         $this->addError('The cached thumbnail is not a valid image');
                         return false;
                 }
-                return $imThumbnail;
+
+                // Save the image data for future processing
+                ob_start();
+                imagegd2($imThumbnail, null, null, IMG_GD2_RAW);
+                $this->thumbnail = ob_get_clean();
+
+                return true;
             }
             return false;
         }
@@ -472,10 +509,51 @@ class ThumbGen
     }
 
     /**
+     * Retrieves the thumbnail data so it can be passed to plugins
+     *
+     * @return string Returns the thumbnail data
+     */
+    public function getThumbnailData()
+    {
+        return $this->thumbnail;
+    }
+
+    /**
+     * Updates the thumbnail data after it was processed externally
+     *
+     * @param string $thumbnail Thumbnail data
+     * @param boolean $checkData OPTIONAL Check if the data is a valid image
+     * @return boolean Returns false if the data is invalid
+     */
+    public function updateThumbnailData($thumbnail, $checkData = false)
+    {
+        if ($checkData && !@imagecreatefromstring($thumbnail))
+        {
+            // The image type is unsupported, the data is not in a recognised
+            // format, or the image is corrupt and cannot be loaded
+            $this->throwError('Invalid image data');
+            return false;
+        }
+
+        $this->thumbnail = $thumbnail;
+        return true;
+    }
+
+    /**
+     * Retrieves the thumbnail dimensions
+     *
+     * @return array Returns the thumbnail dimensions
+     */
+    public function getThumbnailDimensions()
+    {
+        return $this->thumbnailDimensions;
+    }
+
+    /**
      * Throws an error
      *
      * @param string $error Error text
-     * @return false
+     * @return boolean Returns false if there is an error
      */
     protected function throwError($error)
     {

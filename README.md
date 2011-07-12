@@ -18,28 +18,40 @@ How to use
 
     $thumbGen->getThumbnail('path_to/image.jpg');
 
+4. Output the thumbnail image:
+
+    $thumbGen->outputThumbnail();
+
 Note: If you want to use caching, make sure the `cache` folder is writable.
 
-Watermarks
+Watermark
 ----------
 
-1. In order to use the Watermark features you need to load both the Core and
-   the Watermark classes:
+1. In order to use the Watermark features you need to also load the Watermark
+   plugin class:
 
     require_once('path_to/ThumbGen.class.php');
     require_once('path_to/Watermark.class.php');
 
-2. Create a Watermark object instead of a ThumbGen object:
+2. Create a Watermark object:
 
-    $thumbGen = new Watermark();
+    $tgWatermark = new \ThumbGen\Watermark();
 
 3. Setup the Watermark options:
 
-    $thumbGen->setWatermark('path_to/watermark.png');
+    $tgWatermark->setWatermark('path_to/watermark.png');
 
-4. And finally, generate the thumbnail:
+4. Apply the watermark to the thumbnail:
 
-    $thumbGen->getThumbnail('path_to/image.jpg');
+    $tgWatermark->addWatermark($thumbGen);
+
+5. Update the thumbnail with the watermarked version:
+
+    $thumbGen->updateThumbnailData($tgWatermark->getThumbnailData());
+
+6. And finally, generate the thumbnail:
+
+    $thumbGen->outputThumbnail();
 
 Note: The watermark image must be PNG.
 
@@ -48,24 +60,30 @@ Please see the examples for actual code.
 Changelog
 ---------
 
-##### 1.0.0
+##### 1.1.0
 
- - Initial version
+ - Changed the plugin arhitecture so the plugins are now separate objects that
+   extend the abstract Plugin object
 
 ##### 1.0.1
 
  - Fixed the caching to use the set duration instead of being infinite (util the
    source image was modified)
 
- - Watermark: the setWatermark repetition doesn't need to be an array and 
+ - Watermark: the setWatermark repetition doesn't need to be an array and
    include the padding when it's set to 'no-repeat'
+
+##### 1.0.0
+
+ - Initial version
+
 
 To Do
 -----
 
  - Documentation
  - Unit testing
- 
+
 ----------------------------------
 
 Copyright (c) 2011 [Mihai Zaharie](http://mihai.zaharie.ro)

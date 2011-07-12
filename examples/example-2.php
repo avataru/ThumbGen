@@ -14,5 +14,8 @@ $thumbGen->setQuality(100);
 // 150 x 260 pixels
 $thumbGen->setDimensions(150, 260);
 
-// Output the thumbnail
+// Prepare the thumbnail
 $thumbGen->getThumbnail('images/pic.jpg');
+
+// Output the thumbnail
+$thumbGen->outputThumbnail();
