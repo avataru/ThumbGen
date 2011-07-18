@@ -11,7 +11,7 @@
  *
  * @package ThumbGen
  * @subpackage Plugin
- * @version 1.1.0
+ * @version 1.1.1
  * @link https://github.com/avataru/ThumbGen
  * @author Mihai Zaharie <mihai@zaharie.ro>
  * @license http://creativecommons.org/licenses/by-nc-sa/3.0/   CC BY-NC-SA 3.0
@@ -80,7 +80,8 @@ class Watermark extends Plugin
     public function addWatermark(\ThumbGen $thumbGen)
     {
         $thumbnail = imagecreatefromstring($thumbGen->getThumbnailData());
-        list($width, $height) = array_values($thumbGen->getThumbnailDimensions());
+        $width = $thumbGen->thumbnailDimensions['width'];
+        $height = $thumbGen->thumbnailDimensions['height'];
 
         if ($thumbnail != null)
         {
@@ -165,7 +166,7 @@ class Watermark extends Plugin
     }
 
     /**
-     * Adds a watermark
+     * Sets the watermark
      *
      * @param string $watermark OPTIONAL Watermark image path
      * @param array $dimensions OPTIONAL Watermark width and height in pixels

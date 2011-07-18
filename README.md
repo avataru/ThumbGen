@@ -60,18 +60,22 @@ Please see the examples for actual code.
 Changelog
 ---------
 
+##### 1.1.1
+ - Added the magic method __get() in the ThumbGen class so properties can be 
+   easily retrieved from a plugin. Only specific properties are available.
+
 ##### 1.1.0
 
  - Changed the plugin arhitecture so the plugins are now separate objects that
-   extend the abstract Plugin object
+   extend the abstract Plugin object.
 
 ##### 1.0.1
 
  - Fixed the caching to use the set duration instead of being infinite (util the
-   source image was modified)
+   source image was modified);
 
  - Watermark: the setWatermark repetition doesn't need to be an array and
-   include the padding when it's set to 'no-repeat'
+   include the padding when it's set to 'no-repeat'.
 
 ##### 1.0.0
 

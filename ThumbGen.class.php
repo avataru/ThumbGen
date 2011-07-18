@@ -11,7 +11,7 @@
  *
  * @package ThumbGen
  * @subpackage Core
- * @version 1.1.0
+ * @version 1.1.1
  * @link https://github.com/avataru/ThumbGen
  * @author Mihai Zaharie <mihai@zaharie.ro>
  * @license http://creativecommons.org/licenses/by-nc-sa/3.0/   CC BY-NC-SA 3.0
@@ -34,7 +34,7 @@ class ThumbGen
      *
      * @var string
      */
-    protected $format               = 'jpg';
+    protected $thumbnailFormat      = 'jpg';
 
     /**
      * Thumbnail quality (percentage)
@@ -122,7 +122,7 @@ class ThumbGen
      */
     public function getThumbnail($sourceImage, $width = null, $height = null, $format = null)
     {
-        $format = ($format != null && in_array($format, $this->validThumbnailTypes)) ? $format : $this->format;
+        $format = ($format != null && in_array($format, $this->validThumbnailTypes)) ? $format : $this->thumbnailFormat;
 
         if ($this->useCache && $this->isCached($sourceImage, $width, $height, $format))
         {
@@ -242,7 +242,7 @@ class ThumbGen
         {
             $thumbnailData = imagecreatefromstring($this->thumbnail);
 
-            switch($this->format)
+            switch($this->thumbnailFormat)
             {
                 case 'gif':
                     header('Content-Type: image/gif');
@@ -276,7 +276,7 @@ class ThumbGen
     {
         if (in_array($format, $this->validThumbnailTypes))
         {
-            $this->format =  $format;
+            $this->thumbnailFormat =  $format;
             return true;
         }
         return false;
@@ -456,7 +456,7 @@ class ThumbGen
 
         // Append the extension
         $cachedImage .= '.';
-        $cachedImage .= ($format != null && in_array($format, $this->validThumbnailTypes)) ? $format : $this->format;
+        $cachedImage .= ($format != null && in_array($format, $this->validThumbnailTypes)) ? $format : $this->thumbnailFormat;
 
         return $cachedImage;
     }
@@ -540,16 +540,6 @@ class ThumbGen
     }
 
     /**
-     * Retrieves the thumbnail dimensions
-     *
-     * @return array Returns the thumbnail dimensions
-     */
-    public function getThumbnailDimensions()
-    {
-        return $this->thumbnailDimensions;
-    }
-
-    /**
      * Throws an error
      *
      * @param string $error Error text
@@ -559,5 +549,40 @@ class ThumbGen
     {
         die($error);
         return false;
+    }
+
+    /**
+     * Magic!
+     * 
+     * @param string $name Property name
+     * @return mixed property
+     */
+    public function __get($name)
+    {
+        $validProperties = array(
+            'thumbnailDimensions',
+            'thumbnailFormat',
+            'thumbnailQuality',
+            'useCache',
+            'cacheLocation',
+            'cacheDuration',
+            'validImageTypes',
+            'validThumbnailTypes'
+        );
+
+        if (in_array($name, $validProperties))
+        {
+            return $this->$name;
+        }
+        else
+        {
+            $trace = debug_backtrace();
+            trigger_error(
+                'Undefined property via __get(): ' . $name .
+                ' in ' . $trace[0]['file'] .
+                ' on line ' . $trace[0]['line'],
+                E_USER_NOTICE);
+            return null;
+        }
     }
 }
